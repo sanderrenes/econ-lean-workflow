@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # pre-commit: flag new `sorry` in staged .lean files.
 # Installed by: cp hooks/git/pre-commit -> .git/hooks/pre-commit (see lean-econ-workflow skill).
+#
+# Scope note: this checks the economics-workflow's own phase-completion
+# criterion (no undocumented sorry). Lean-technical checks (axiom hygiene,
+# conflict markers, docstring drift, frozen artifacts) live in the sibling
+# `lean-harness` skill, not here — see SKILL.md "What's a hook vs. what's a doc".
 set -euo pipefail
 
 staged_lean=$(git diff --cached --name-only --diff-filter=ACM -- '*.lean' || true)

@@ -155,6 +155,29 @@ installed," and "build actually green" all passed both and got automated.
 
 ---
 
+## Related, deliberately separate skills
+
+This file only covers incidents about *multi-project orchestration* (session/phase
+discipline, status duplicated across control files, the workspace's own git-hook
+mechanics). Two adjacent bodies of incident history are kept in their own skills
+instead of folded in here, because they're a different axis of the problem and don't
+apply to every project that adopts this workflow:
+
+- **`lean-harness`** — single-project Lean *proof-quality* discipline: axiom hygiene,
+  what dependency/usage claims are safe to trust, linter blind spots, instantiating a
+  theorem at a canonical example, docstring/frozen-artifact drift. Applies to any Lean
+  project regardless of whether it uses this workflow's control-file convention.
+- **`palomar-comparator`** — submission-format discipline specific to projects
+  structured as Palomar Challenge/Solution/`comparator.json` submissions (proof-term
+  auxiliary numbering, the Challenge-sorry-count exception, statement-surface size
+  caps). Doesn't apply to a project that isn't a Palomar submission.
+
+Both are registered as skills at the workspace root they were extracted from
+(`.claude/skills/lean-harness`, `.claude/skills/palomar-comparator`) rather than
+copied into this portable package, since they cite specific sibling project paths
+this package is deliberately generalized away from. Adapt them the way this package's
+own `README.md` describes adapting `SKILL.md`, if reusing them elsewhere.
+
 ## Open proposals (not yet built)
 
 Ranked roughly by how much of the observed damage each would have prevented:
