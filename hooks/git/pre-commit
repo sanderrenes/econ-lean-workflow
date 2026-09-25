@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# pre-commit: flag new `sorry` in staged .lean files.
+# Installed by: cp hooks/git/pre-commit -> .git/hooks/pre-commit (see lean-econ-workflow skill).
+set -euo pipefail
+
+staged_lean=$(git diff --cached --name-only --diff-filter=ACM -- '*.lean' || true)
+[ -z "$staged_lean" ] && exit 0
+
+flagged=0
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  if git diff --cached -- "$f" | grep -E '^\+' | grep -v '^\+\+\+' | grep -qE '\bsorry\b'; then
+    echo "pre-commit: '$f' introduces a new 'sorry'."
+    flagged=1
+  fi
+done <<< "$staged_lean"
+
+[ "$flagged" -eq 0 ] && exit 0
+
+if [ -f memory.md ] && grep -qi 'sorry' memory.md; then
+  echo "pre-commit: memory.md already references sorries — confirm the new one is logged under"
+  echo "'Open Sorries' with a reason before pushing. Allowing commit."
+  exit 0
+fi
+
+echo "pre-commit: BLOCKED — new sorry found but memory.md has no 'Open Sorries' section/mentions."
+echo "Per the lean-econ-workflow skill: log it in memory.md with a reason, or remove it."
+echo "To bypass once: git commit --no-verify"
+exit 1

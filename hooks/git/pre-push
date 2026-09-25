@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# pre-push: require a clean `lake build` (against a real default target) before
+# anything leaves this machine.
+# Installed by: cp hooks/git/pre-push -> .git/hooks/pre-push (see lean-econ-workflow skill).
+set -euo pipefail
+
+if ! command -v lake >/dev/null 2>&1; then
+  echo "pre-push: 'lake' not found on PATH — skipping build check. Install elan/lake to enable it."
+  exit 0
+fi
+
+if [ ! -f lakefile.toml ] && [ ! -f lakefile.lean ]; then
+  # Not a Lake project root (e.g. pushing from a subdirectory hook copy) — nothing to build.
+  exit 0
+fi
+
+# Catch the "0 jobs" silent-no-op failure mode before it hides behind a green
+# `lake build` exit code (LESSONS.md incident 1).
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -x "$here/../scripts/check-default-target.sh" ]; then
+  "$here/../scripts/check-default-target.sh" || {
+    echo "pre-push: BLOCKED — default target check failed (see above)."
+    echo "To bypass once: git push --no-verify"
+    exit 1
+  }
+elif [ -x ./scripts/check-default-target.sh ]; then
+  ./scripts/check-default-target.sh || {
+    echo "pre-push: BLOCKED — default target check failed (see above)."
+    echo "To bypass once: git push --no-verify"
+    exit 1
+  }
+fi
+
+echo "pre-push: running 'lake build'..."
+build_output="$(lake build 2>&1)" || {
+  echo "$build_output"
+  echo "pre-push: BLOCKED — 'lake build' failed. Fix the build before pushing."
+  echo "To bypass once: git push --no-verify"
+  exit 1
+}
+echo "$build_output"
+
+if echo "$build_output" | grep -qE '\(0 jobs\)'; then
+  echo "pre-push: BLOCKED — build reported 0 jobs. Nothing was actually checked"
+  echo "(default target likely misconfigured — see check-default-target above)."
+  echo "To bypass once: git push --no-verify"
+  exit 1
+fi
+
+echo "pre-push: build clean."
+exit 0

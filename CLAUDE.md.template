@@ -1,0 +1,63 @@
+# CLAUDE.md — <project name>
+
+<!--
+Template for a project-local CLAUDE.md, extracted from the pattern that worked
+across the lean-econ-workflow's sibling projects. Fill in the placeholders.
+
+What belongs HERE (project-specific, a script can't infer it):
+  - identity: what this project proves and why, its one-line goal
+  - where the plan/status files are and which is authoritative for what
+  - dependency graph (what this project imports/relies on, frozen or not)
+  - decisions in force: the load-bearing, project-specific choices (types,
+    representations, scope boundaries) that every session must respect
+  - what NOT to rebuild: pointers to upstream lemmas this project reuses
+
+What does NOT belong here — put it in the skill or a hook instead:
+  - the START/RUN/END procedure itself -> lean-econ-workflow's SKILL.md
+  - "run lake build before committing" -> hooks/git/pre-push (mechanical)
+  - "log new sorries in memory.md" -> hooks/git/pre-commit (mechanical)
+  - "check memory.md exists" -> hooks/claude-code/session-check.sh (mechanical)
+  A CLAUDE.md that duplicates the mechanical checks tends to go stale exactly
+  the way the checks it duplicates were built to catch — see LESSONS.md.
+-->
+
+## Project Identity
+
+**Goal**: <one paragraph: what this project proves, in relation to any master
+plan/root document it implements a slice of>.
+
+**Status file**: `memory.md` — read before anything else, updated every session.
+**Plan file**: `plan.md` — this project's phase-by-phase slice of <the master
+plan, if any>.
+
+**<Root plan document>, if one exists, is authoritative for phase CONTENT** —
+read the relevant phase section there before starting a phase; this file only
+tracks status and project-local conventions.
+
+## Dependency
+
+- `<relative path to upstream project>` (transitively: `<...>`, Mathlib `<version>`)
+- State plainly whether the upstream is **frozen** (this project must not edit it)
+  or actively co-developed.
+
+## Decisions in force
+
+List only the decisions that are load-bearing for *this* project and not
+reconstructable from reading the code — reference a `decisions.md`/`DESIGN_*.md`
+entry by id rather than re-explaining it here if one exists.
+
+- **<id>**: <one-line decision>. <Why, if not obvious.>
+
+## Session Protocol
+
+Follow the `lean-econ-workflow` skill (START/RUN/END). Each phase ends with: green
+`lake build` (nonzero job count), 0 new sorries, `#print axioms` on the phase's
+headline result(s) (target: `[propext, Classical.choice, Quot.sound]` only unless
+the project has a documented reason for more), `memory.md`/`progress.md` updated,
+a `phase(N): ...` commit.
+
+## What NOT to rebuild
+
+<Pointer to a table or section — in this file, `plan.md`, or a root plan document —
+listing existing upstream lemmas this project reuses verbatim (file:line
+references). Check it before writing a new lemma that duplicates upstream work.>

@@ -1,0 +1,15 @@
+{
+  "_comment": "Merge this into a Lean project's .claude/settings.json (or the workspace-level one). Adjust the command path to wherever you copied hooks/claude-code/session-check.sh. This runs the START-step checks automatically instead of relying on the model to remember to do them by reading SKILL.md every session.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/lean-econ-workflow/hooks/claude-code/session-check.sh\" 2>&1 || true"
+          }
+        ]
+      }
+    ]
+  }
+}
