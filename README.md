@@ -43,7 +43,7 @@ to adopt the workflow there.
   the MCP server the `mcp__lean-lsp__*` tools in this environment come from.
   This package's hooks shell out to `lake`/`lean` directly for cheap, scriptable
   checks (build status, axiom list) — they don't need or duplicate the MCP.
-- **Not proof-quality or submission-format discipline.** Whether a given proof
+- **Not proof-quality or submission-format discipline.** Whether a given lean proof
   is *trustworthy* (axiom hygiene, vacuous hypotheses, linter blind spots) is
   the sibling `lean-harness` skill's job; whether a project is *ready to submit*
   to the [Palomar](https://palomar-registry.org/) registry — the public,
