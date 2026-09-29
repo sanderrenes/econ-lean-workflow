@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# lean-harness pre-commit: the mechanically checkable parts of lean-harness SKILL.md
+# that lean-econ-workflow's own pre-commit (undocumented-`sorry` check) doesn't cover.
+#
+# Install: copy to <project>/scripts/git-hooks/harness-pre-commit. lean-econ-workflow's
+# pre-commit calls it automatically when present; a project that doesn't use that
+# workflow can install this file directly as .git/hooks/pre-commit.
+#
+# BLOCKS on: merge-conflict markers in any staged file; a new `axiom`, `admit`, or
+# kernel-check-disabling option in a .lean file; a `File.lean:NNN` reference added to
+# prose; an edit to a frozen path.
+# WARNS (never blocks) on: native_decide / implemented_by / unsafe / opaque; a changed
+# declaration header (re-read its docstring); .lean staged without the status file.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+fail=0
+
+staged_all=$(git diff --cached --name-only --diff-filter=ACMR || true)
+[ -z "$staged_all" ] && exit 0
+staged_lean=$(echo "$staged_all" | grep -E '\.lean$' || true)
+
+# Lines this commit adds to one file (staged version), without the diff header.
+added() { git diff --cached -U0 -- "$1" | grep -E '^\+' | grep -vE '^\+\+\+' | cut -c2- || true; }
+
+# --- 1. Merge-conflict markers, in EVERY staged file regardless of extension ---
+# A scan that names only the file types you expect to be affected misses the README
+# (LESSONS.md, "conflict markers").
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  # `<<<<<<<`/`>>>>>>>` only: a bare `=======` is also a Markdown heading underline,
+  # and a real conflict always carries the other two.
+  if git show ":$f" 2>/dev/null | grep -qE '^(<{7}|>{7})( |$)'; then
+    echo "lean-harness: BLOCKED — '$f' contains an unresolved merge-conflict marker."
+    fail=1
+  fi
+done <<< "$staged_all"
+
+# --- 2. Escape hatches added to .lean files ---
+# A custom axiom is a sorry wearing a hat; `admit` is a sorry with another name;
+# skipKernelTC switches off the one check that cannot be argued with.
+# The scan is textual: it cannot tell code from a comment, so a docstring that says
+# "admit" trips it. Bypass once with --no-verify if so.
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  a="$(added "$f" | sed -E 's/--.*$//')"
+  [ -z "$a" ] && continue
+  hit=$(echo "$a" | grep -nE '^[[:space:]]*(@\[[^]]*\][[:space:]]*)?((private|protected|noncomputable|unsafe)[[:space:]]+)*axiom[[:space:]]|\badmit\b|debug\.skipKernelTC|\bsorryAx\b' || true)
+  if [ -n "$hit" ]; then
+    echo "lean-harness: BLOCKED — '$f' adds an escape hatch (axiom / admit / sorryAx / skipKernelTC):"
+    echo "$hit" | sed 's/^/    /'
+    echo "  A custom axiom needs explicit human approval (SKILL.md §1 rule 3)."
+    fail=1
+  fi
+  warn=$(echo "$a" | grep -nE '\bnative_decide\b|implemented_by|^[[:space:]]*(unsafe|opaque)[[:space:]]|@\[extern' || true)
+  if [ -n "$warn" ]; then
+    echo "lean-harness: note — '$f' adds a trust-extending construct:"
+    echo "$warn" | sed 's/^/    /'
+    echo "  native_decide adds Lean.ofReduceBool to the axiom list and trusts the compiler;"
+    echo "  keep it out of any advertised result (check-axioms.sh will flag it there)."
+  fi
+done <<< "$staged_lean"
+
+# --- 3. No File.lean:NNN line-number references added to prose ---
+# They rot on the next unrelated edit and still look precise (LESSONS.md, "comment audit").
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  hit=$(added "$f" | grep -oE '[A-Za-z0-9_./-]+\.lean:[0-9]+' || true)
+  if [ -n "$hit" ]; then
+    echo "lean-harness: BLOCKED — '$f' adds line-number references into .lean files:"
+    echo "$hit" | sort -u | sed 's/^/    /'
+    echo "  Cite the file and the declaration name instead."
+    fail=1
+  fi
+done <<< "$(echo "$staged_all" | grep -E '\.(md|tex|txt|yaml|yml)$' || true)"
+
+# --- 4. Frozen presentation artefacts ---
+if [ -x scripts/frozen-guard.sh ]; then
+  scripts/frozen-guard.sh || fail=1
+fi
+
+# --- 5. Advisory: declaration headers changed => re-read their docstrings ---
+# Every drifted comment in the originating audit traced to a signature change whose
+# docstring was not re-read in the same commit. A hook can nudge; only a reader can
+# tell whether the prose still says the right thing.
+decl_re='^[+-][[:space:]]*(@\[[^]]*\][[:space:]]*)?((private|protected|noncomputable|nonrec|partial)[[:space:]]+)*(theorem|lemma|def|abbrev|structure|class|instance|inductive)[[:space:]]+([^[:space:]:({]+)'
+changed=""
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  names=$(git diff --cached -U0 -- "$f" | grep -vE '^(\+\+\+|---)' \
+    | sed -nE "s/${decl_re}.*/\5/p" | sort -u || true)
+  [ -n "$names" ] && changed+="$(echo "$names" | sed "s|^|    $f: |")"$'\n'
+done <<< "$staged_lean"
+if [ -n "$changed" ]; then
+  echo "lean-harness: note — declaration headers changed; re-read each one's docstring and the"
+  echo "  prose that cites it (README, notes, formalization.yaml) before committing:"
+  printf '%s' "$changed"
+fi
+
+# --- 6. Advisory: Lean changed but the status file didn't ---
+if [ -n "$staged_lean" ]; then
+  status=""
+  for s in memory.md documentation/memory.md TODO.md; do [ -f "$s" ] && { status="$s"; break; }; done
+  if [ -n "$status" ] && ! echo "$staged_all" | grep -qxF "$status"; then
+    echo "lean-harness: note — .lean files staged but '$status' is not. A status file that lags"
+    echo "  the code is trusted exactly as much as a current one (LESSONS.md, 'stale status')."
+  fi
+fi
+
+[ "$fail" -eq 0 ] && exit 0
+echo "lean-harness pre-commit: BLOCKED (see above). To bypass once: git commit --no-verify"
+exit 1

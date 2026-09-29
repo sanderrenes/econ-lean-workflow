@@ -8,6 +8,13 @@
 # `lean-harness` skill, not here — see SKILL.md "What's a hook vs. what's a doc".
 set -euo pipefail
 
+# Chain the lean-harness pre-commit (conflict markers, escape hatches, line-number refs,
+# frozen artefacts) when the project has adopted it — see lean-harness/SKILL.md §11.
+harness="$(git rev-parse --show-toplevel)/scripts/git-hooks/harness-pre-commit"
+if [ -x "$harness" ]; then
+  "$harness" || exit 1
+fi
+
 staged_lean=$(git diff --cached --name-only --diff-filter=ACM -- '*.lean' || true)
 [ -z "$staged_lean" ] && exit 0
 

@@ -111,6 +111,14 @@ Run the **Setup TODOs** recorded in `memory.md`, typically:
   - **The `session-check.sh` Claude Code hook now also flags a missing/stale install** of these
     git hooks at `SessionStart`, rather than relying on this checklist bullet being remembered —
     see `LESSONS.md` incident 5.
+- install the `lean-harness` companion (`lean-harness/SKILL.md` §11): copy its hooks to
+  `scripts/git-hooks/harness-pre-commit` and `harness-pre-push` and its `scripts/*.sh` to
+  `scripts/`. The `pre-commit`/`pre-push` above call them when present, so the install
+  command above covers them. Opt in to the axiom check with `scripts/axiom_targets.txt`
+  (`<Module> <decl>` per line; a Palomar `comparator.json` is picked up automatically), list
+  finished talks/papers in `scripts/frozen_paths.txt`, and copy `lean-harness/lean/Linters.lean`
+  into the library, imported from its base module. Run `scripts/check-orphan-modules.sh`
+  once: a file no build root imports is never compiled;
 - if the project will live on GitHub, add a CI workflow (checkout + a Lean build action). If
   the project has a local Lake path dependency on a sibling repo, the workflow needs multiple
   checkout steps — one per dependency, checked out into the matching relative path.
@@ -128,6 +136,14 @@ A **phase** is the unit of work (usually one `.lean` file / one plan project). W
   note the proof pattern if non-obvious.
 - **Never mark `done` with a `sorry`.** Any intentional `sorry` is logged under **Open Sorries**
   in `memory.md` with a reason and date.
+- **When a proof will not close, suspect the statement first.** Stop and say so before
+  engineering around it; never delete or comment out the obligation, and never close it with
+  a "reasonable assumption" hypothesis (`lean-harness/SKILL.md` §2).
+- **Proof quality is the companion skill's job.** Whether a finished proof is trustworthy —
+  axioms, vacuity, statements that say what their names claim, docstrings that match — is
+  governed by `lean-harness/SKILL.md` in this repository. Read it once per project; run its
+  completion audit (`scripts/audit-completion.sh`) before a phase's headline result is
+  called done in anything other people read.
 - **Before citing another file's lemma as an existing bridge to a hard result, `grep` for it
   and confirm it actually exists and compiles.** A proof-sketch comment claiming "the missing
   piece is available in `X.lean`" is not evidence the piece exists — see `LESSONS.md`
@@ -165,6 +181,17 @@ the higher tier wins or must be explicitly reopened with the user.
    means the default target is misconfigured and nothing was actually checked — see START
    §New-project setup). A phase isn't done until this passes with a real, nonzero build and
    0 new sorries.
+0b. **Run the `lean-harness` checks** (`lean-harness/SKILL.md` §6–7):
+   - `scripts/audit-completion.sh` — escape hatches, orphaned modules, build, axioms on the
+     configured targets (and the Challenge sorry count, for a Palomar layout). Every headline
+     result of the phase should be in `scripts/axiom_targets.txt` so this actually checks it.
+   - For every declaration whose signature changed this phase, re-read its docstring and every
+     note/README/paper line that cites it (the pre-commit hook lists the changed headers).
+   - Check "done" against `plan.md`'s own wording for the phase, item by item — not against
+     `memory.md`'s summary of it.
+   - If a result of this phase will go into a paper, talk, or submission: run the full
+     completion audit with `--clean`, prove non-vacuity at a canonical example, and write it
+     up from `lean-harness/templates/VERIFICATION.md.template`.
 1. **Update `memory.md`**:
    - Move the phase's theorems/definitions into **Completed**.
    - Confirm **0 sorries** or record each placeholder with a reason.
@@ -210,10 +237,15 @@ state) and `progress.md` (partial row), but the **full** Phase End Workflow (and
 ```
 START  □ read memory.md  □ read CLAUDE.md  □ check tools  □ report  □ ask to continue
        (new project) □ default_target set  □ pre-commit + pre-push hooks installed  □ CI added
+                     □ lean-harness hooks, scripts, linters, axiom_targets.txt
 RUN    □ one decl at a time  □ compiler-guided  □ update memory.md per proof
        □ no undocumented sorry  □ assumptions tracked  □ honesty constraint  □ ambiguity → design doc
        □ verify cited bridging lemmas actually exist before relying on them
-END    □ lake build clean  □ memory.md updated  □ progress.md row + commit block
+       □ won't close → suspect the statement, stop and say so
+       □ lean-harness gate: standard axioms, no silent weakening, docstrings re-read
+END    □ lake build clean  □ audit-completion.sh  □ changed docstrings re-read
+       □ done checked against plan.md wording  □ VERIFICATION.md if it goes public
+       □ memory.md updated  □ progress.md row + commit block
        □ decisions.md if applicable  □ duplicated status claims elsewhere updated too
        □ phase(N) git commit  □ 0 sorries confirmed  □ next-phase prereqs checked
 ```

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# lean-harness pre-push: the checks that need a built project, so they run where
+# lean-econ-workflow's pre-push has just run `lake build` — after it, never instead of it.
+#
+# Install: copy to <project>/scripts/git-hooks/harness-pre-push. lean-econ-workflow's
+# pre-push calls it after a green build when present; a project that doesn't use that
+# workflow can install it as .git/hooks/pre-push (then run `lake build` first yourself —
+# this hook does not build).
+#
+# BLOCKS on: a library file no build root imports (check-orphan-modules.sh); a target
+# resting on a non-standard axiom (check-axioms.sh, opt-in via scripts/axiom_targets.txt
+# or comparator.json).
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+fail=0
+
+if [ -x scripts/check-orphan-modules.sh ]; then
+  scripts/check-orphan-modules.sh || fail=1
+fi
+
+if [ -x scripts/check-axioms.sh ]; then
+  out="$(scripts/check-axioms.sh 2>&1)" || fail=1
+  if [ -n "$out" ]; then echo "$out"
+  else echo "lean-harness pre-push: axioms NOT checked — no scripts/axiom_targets.txt or comparator.json."; fi
+fi
+
+[ "$fail" -eq 0 ] && exit 0
+echo "lean-harness pre-push: BLOCKED (see above). To bypass once: git push --no-verify"
+exit 1

@@ -43,9 +43,12 @@ to adopt the workflow there.
   the MCP server the `mcp__lean-lsp__*` tools in this environment come from.
   This package's hooks shell out to `lake`/`lean` directly for cheap, scriptable
   checks (build status, axiom list) — they don't need or duplicate the MCP.
-- **Not proof-quality or submission-format discipline.** Whether a given lean proof
-  is *trustworthy* (axiom hygiene, vacuous hypotheses, linter blind spots) is
-  the sibling `lean-harness` skill's job; whether a project is *ready to submit*
+- **Not, by itself, proof-quality or submission-format discipline.** Whether a
+  given Lean proof is *trustworthy* (axiom hygiene, vacuous hypotheses, linter
+  blind spots, docstrings that say what the theorem proves) is the job of the
+  Lean-specific companion shipped in [`lean-harness/`](lean-harness/SKILL.md) —
+  a separate skill in this same repository, usable with or without this
+  workflow; whether a project is *ready to submit*
   to the [Palomar](https://palomar-registry.org/) registry — the public,
   permanent submission format built around a `Challenge.lean` statement surface,
   a `Solution.lean`, and a `comparator.json` that an independent Comparator tool
@@ -63,6 +66,13 @@ to adopt the workflow there.
 | `hooks/claude-code/session-check.sh` | Claude Code `SessionStart` hook — runs the mechanical parts of START §1-3 automatically (memory.md present, git hooks installed and current, default target set, lake on PATH). | Copy anywhere convenient (e.g. `.claude/hooks/`) and point `settings.json` at it. |
 | `hooks/claude-code/settings.snippet.json` | Example `hooks.SessionStart` config wiring `session-check.sh` in. | Merge into `.claude/settings.json`. |
 | `LESSONS.md` | Postmortem: five incidents that shaped these rules, which ones now have automated checks, and open proposals that don't yet. | Read once before adopting; keep in this folder for reference. |
+| `lean-harness/SKILL.md` | The Lean-specific companion skill: quality gate, what counts as evidence, linter blind spots, statement traps, the completion audit, keeping prose faithful to the Lean. | `.claude/skills/lean-harness/SKILL.md` |
+| `lean-harness/LESSONS.md` | The incidents behind the harness, plus a table mapping the TU Delft talk's incident list to where each is handled. | Read once. |
+| `lean-harness/hooks/git/pre-commit`, `pre-push` | Harness hooks: conflict markers in any file, new `axiom`/`admit`, `File.lean:NNN` in prose, frozen artefacts (commit); orphaned modules and axiom hygiene (push). Called automatically by this package's own hooks. | `<project>/scripts/git-hooks/harness-pre-commit`, `harness-pre-push` |
+| `lean-harness/scripts/` | `check-axioms.sh`, `check-orphan-modules.sh`, `frozen-guard.sh`, `audit-completion.sh` (post-completion audit). | `<project>/scripts/` |
+| `lean-harness/lean/Linters.lean` | Two advisory linters: `linter.trueStatement`, `witnessless` (`@[needs_witness]`/`@[witness_for]`). | `<YourLib>/Linters.lean`, imported from the base module. |
+| `lean-harness/templates/VERIFICATION.md.template` | Write-up for the post-completion audit (non-vacuity, faithfulness). | `<project>/VERIFICATION.md` when auditing. |
+| `lean-harness/hooks/claude-code/settings.snippet.json` | Permission rule: the agent does not `git push`. | Merge into `.claude/settings.json`. |
 
 ## Adopting this for a new project
 
@@ -87,19 +97,25 @@ to adopt the workflow there.
    put `session-check.sh`. (The `update-config` skill, if available, can do
    this wiring for you.)
 5. Create `memory.md`, `progress.md`, `plan.md` per the table in `SKILL.md`.
+6. Adopt the Lean companion (recommended): register `lean-harness/SKILL.md` as a
+   skill, copy its hooks to `<project>/scripts/git-hooks/harness-pre-commit` and
+   `harness-pre-push` and its `scripts/*.sh` to `<project>/scripts/` — this
+   package's `pre-commit`/`pre-push` call them when present, so step 2's install
+   covers both. Details and opt-in config in `lean-harness/SKILL.md` §11.
 
 ## Related skills
 
-This package deliberately does three of the jobs a Lean-economics project needs
-and leaves the rest to other tools/skills, so each piece can be adopted, updated,
-or swapped independently:
+This repository covers two of the jobs a Lean-economics project needs — session/phase
+orchestration (the root skill) and proof-quality discipline (the bundled `lean-harness/`
+skill) — and leaves the rest to other tools/skills, so each piece can be adopted,
+updated, or swapped independently:
 
 | Concern | Handled by | Notes |
 |---|---|---|
 | Writing/debugging the Lean proofs themselves | [`lean4-skills`](https://github.com/cameronfreer/lean4-skills) plugin | External; this package's `SKILL.md` cites its `/lean4:*` commands rather than re-implementing them. |
 | Live Lean/Lake process interaction (goals, diagnostics, search) | [`lean-lsp-mcp`](https://github.com/oOo0oOo/lean-lsp-mcp) | External MCP server; `mcp__lean-lsp__*` tools. |
 | Multi-project session/phase orchestration | **this package** | Control files, START/RUN/END, git/Claude Code hooks. |
-| Single-project proof-quality discipline (axiom hygiene, vacuity, linter blind spots) | `lean-harness` skill | Sibling skill, see `LESSONS.md`'s "Related, deliberately separate skills". |
+| Single-project proof-quality discipline (axiom hygiene, vacuity, linter blind spots, prose drift) | [`lean-harness/`](lean-harness/SKILL.md) (in this repo) | Separate skill, shipped alongside; applies to any Lean project, with or without this workflow. |
 | Preparing/auditing a project for Palomar-registry submission | `palomar-comparator` skill | Sibling skill; only relevant if the project is structured as a Palomar `Challenge`/`Solution`/`comparator.json` submission. |
 
 ## Keeping this in sync with the origin workspace

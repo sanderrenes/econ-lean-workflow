@@ -54,10 +54,14 @@ Follow the `lean-econ-workflow` skill (START/RUN/END). Each phase ends with: gre
 `lake build` (nonzero job count), 0 new sorries, `#print axioms` on the phase's
 headline result(s) (target: `[propext, Classical.choice, Quot.sound]` only unless
 the project has a documented reason for more), `memory.md`/`progress.md` updated,
-a `phase(N): ...` commit.
+a `phase(N): ...` commit. Proof-quality rules (when a `sorry` won't close, what
+counts as evidence, statement traps, keeping docstrings faithful) come from the
+`lean-harness` skill; list project-specific additions below rather than restating it.
 
 ## What NOT to rebuild
 
 <Pointer to a table or section — in this file, `plan.md`, or a root plan document —
-listing existing upstream lemmas this project reuses verbatim (file:line
-references). Check it before writing a new lemma that duplicates upstream work.>
+listing existing upstream lemmas this project reuses verbatim (file + declaration
+name — never a line number, which goes stale on the next unrelated edit; see
+lean-harness/SKILL.md §7). Check it before writing a new lemma that duplicates
+upstream work.>

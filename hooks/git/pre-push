@@ -48,4 +48,11 @@ if echo "$build_output" | grep -qE '\(0 jobs\)'; then
 fi
 
 echo "pre-push: build clean."
+
+# Chain the lean-harness pre-push (orphaned modules, axiom hygiene) — it needs the build
+# that just succeeded, so it runs after, never instead. See lean-harness/SKILL.md §11.
+harness="$(git rev-parse --show-toplevel)/scripts/git-hooks/harness-pre-push"
+if [ -x "$harness" ]; then
+  "$harness" || exit 1
+fi
 exit 0

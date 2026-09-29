@@ -1,0 +1,9 @@
+{
+  "_comment": "Merge into a Lean project's (or the workspace's) .claude/settings.json. The agent commits; the human pushes (lean-harness SKILL.md §9). A push is outward-facing and the pre-push hook is the last gate before it, so the decision to cross it stays with a person. Remove the deny rule only for a deliberately autonomous setup.",
+  "permissions": {
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git push)"
+    ]
+  }
+}

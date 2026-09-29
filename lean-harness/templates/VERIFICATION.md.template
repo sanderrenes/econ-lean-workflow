@@ -1,0 +1,77 @@
+# Verification — <headline declaration(s)>
+
+<!--
+Post-completion audit (lean-harness SKILL.md §6). Write one after a result is claimed
+done and BEFORE that claim goes into a paper, talk, README or submission. It exists to
+attack the ways a "0 sorry, build green" claim can still be hollow: stale build
+artefacts, hidden escape hatches, vacuous truth, and — the subtlest — a perfectly
+checked proof of a subtly different statement.
+
+Checks 1–5 are mechanical: run `scripts/audit-completion.sh --clean` and paste the
+relevant output. Checks 6–8 are the point of the exercise and no script does them.
+Delete this comment when filling in.
+-->
+
+**Date**: <YYYY-MM-DD>  **Commit audited**: `<sha>`  **Toolchain**: `<lean-toolchain>`
+**Claim**: <the sentence being verified, exactly as it will be stated elsewhere>
+**Verdict**: <upheld | upheld with caveats | not upheld>
+
+## Summary
+
+| # | Check | Result |
+|---|---|---|
+| 1 | No `sorry`/`admit`/`native_decide`/`implemented_by`/`axiom`/`opaque`/`set_option debug.*` in source (docstring mentions excepted) | |
+| 2 | (Palomar only) Challenge `sorry` count = `theorem_names` + `definition_names` | |
+| 3 | No orphaned modules — every library file is compiled by this package's build | |
+| 4 | Clean rebuild from source (root package outputs deleted first): nonzero jobs, 0 errors, 0 sorry warnings | |
+| 5 | `#print axioms` on every headline declaration: `[propext, Classical.choice, Quot.sound]` only | |
+| 6 | **Non-vacuity** — each hypothesis set is inhabited by an object the field cares about | |
+| 7 | **Faithfulness** — the elaborated statement is the intended one | |
+| 8 | **Prose** — docstrings, README, notes, `formalization.yaml` state what is proved, at that strength | |
+
+## 1–5. Mechanical checks
+
+```
+<paste audit-completion.sh --clean output>
+```
+
+## 6. Non-vacuity
+
+<For each headline theorem: the witness object, and the declaration that proves it satisfies
+every hypothesis (e.g. `sampleLabeling` + `sperner_is_not_vacuous`; `postedPriceObj` for an
+envelope theorem). Also: is each defined predicate a REAL condition — is there an object
+that fails it? A predicate everything satisfies makes "∀ x, P x → Q x" as cheap as Q.>
+
+## 7. Faithfulness
+
+**The statements as Lean elaborates them** (from `#check`, not from the docstring):
+
+```lean
+<paste>
+```
+
+<Compare against the informal source line by line: quantifier order, which hypotheses, what
+the conclusion actually asserts (pointwise vs in expectation, uniqueness through the model vs
+by structure eta, one mechanism vs a comparison of two). Where feasible, transliterate the
+definitions into an independent script that reuses no Lean reasoning and brute-force the
+statement on small cases; record the script's output here. A structural sanity result
+(e.g. a cardinality formula the encoding must satisfy) is worth more than many random cases.>
+
+## 8. Prose
+
+<Which docstrings / README rows / notes / formalization.yaml entries cite these declarations;
+confirmed each (a) names an existing declaration, (b) states its conclusion at the right
+strength, (c) carries the same hypotheses. List anything corrected.>
+
+## Caveats
+
+<Hypotheses found unused (and whether dropped — dropping one strengthens the theorem; re-run
+the checks against the new signature), edge cases where the statement is vacuous and why that
+is harmless, anything NOT verified and why.>
+
+## Reproducing this audit
+
+```bash
+scripts/audit-completion.sh --clean
+<plus the non-vacuity file / brute-force script invocation>
+```
